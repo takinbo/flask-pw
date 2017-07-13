@@ -1,3 +1,4 @@
+import inspect
 import logging
 import os
 from importlib import import_module
@@ -86,18 +87,17 @@ class Peewee(object):
         ignore = self.app.config['PEEWEE_MODELS_IGNORE']
 
         models = []
-        if Model_ is not Model:
-            try:
-                mod = import_module(self.app.config['PEEWEE_MODELS_MODULE'])
-                for model in dir(mod):
-                    models = getattr(mod, model)
-                    if not isinstance(model, pw.Model):
-                        continue
-                    models.append(models)
-            except ImportError:
+        try:
+            mod = import_module(self.app.config['PEEWEE_MODELS_MODULE'])
+            for name in dir(mod):
+                model = getattr(mod, name)
+                if inspect.isclass(model) and issubclass(model, pw.Model):
+                    models.append(model)
+        except ImportError:
+            if Model_ is not Model:
                 return models
-        elif isinstance(Model_, BaseSignalModel):
-            models = BaseSignalModel.models
+            elif isinstance(Model_, BaseSignalModel):
+                models = BaseSignalModel.models
 
         return [m for m in models if m._meta.name not in ignore]
 
